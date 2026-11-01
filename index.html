@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulador de Superheat y Subcooling | HVAC</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1b2430;--muted:#5b6878;--line:#dbe1e8;--blue:#1d63c4;--red:#c3372c;--ok:#1d7f47;--okbg:#e8f6ee;--warn:#9a6212;--warnbg:#fdf3e2;--bad:#b02a20;--badbg:#fcebea;--info:#2c4f7c;--infobg:#e9f0f9;--accent:#123f6b}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--accent);color:#fff;padding:14px 18px}
+.hwrap{max-width:980px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:1.15rem;margin:0}
+header p{margin:2px 0 0;font-size:.85rem;opacity:.85}
+.lang{display:flex;border:1px solid rgba(255,255,255,.5);border-radius:6px;overflow:hidden}
+.lang button{background:transparent;color:#fff;border:0;padding:6px 12px;font-weight:600;cursor:pointer}
+.lang button.active{background:#fff;color:var(--accent)}
+nav.tabs{display:flex;gap:4px;padding:12px 14px 0;max-width:980px;margin:0 auto}
+nav.tabs button{flex:1;border:1px solid var(--line);border-bottom:0;background:#e6ebf1;padding:10px 6px;border-radius:8px 8px 0 0;font-weight:600;font-size:.95rem;cursor:pointer;color:var(--muted)}
+nav.tabs button.active{background:var(--card);color:var(--ink)}
+main{max-width:980px;margin:0 auto;padding:0 14px 28px}
+.panel{background:var(--card);border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:18px;display:none}
+.panel.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 14px 14px;margin:0;min-width:0}
+legend{font-weight:700;padding:0 6px}
+.low legend{color:var(--blue)} .high legend{color:var(--red)}
+label{display:block;font-size:.88rem;color:var(--muted);margin:8px 0 3px}
+input,select{width:100%;padding:9px 10px;border:1px solid #c3cbd5;border-radius:6px;font-size:1rem;background:#fff;color:var(--ink)}
+input:focus,select:focus{outline:2px solid #8db4e8;border-color:var(--blue)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:16px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:12px}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.stat .v{font-size:1.7rem;font-weight:700;margin-top:2px}
+.stat .s{font-size:.82rem;color:var(--muted)}
+.diag{margin-top:14px;border-radius:8px;padding:12px 14px;border-left:5px solid}
+.diag h3{margin:0 0 4px;font-size:1.05rem}
+.diag p{margin:4px 0}
+.diag.ok{background:var(--okbg);border-color:var(--ok)} .diag.ok h3{color:var(--ok)}
+.diag.add,.diag.recover{background:var(--warnbg);border-color:var(--warn)} .diag.add h3,.diag.recover h3{color:var(--warn)}
+.diag.check,.diag.nocharge{background:var(--badbg);border-color:var(--bad)} .diag.check h3,.diag.nocharge h3{color:var(--bad)}
+.diag.info{background:var(--infobg);border-color:var(--info)} .diag.info h3{color:var(--info)}
+.note{font-size:.85rem;color:var(--muted);margin-top:12px}
+details{margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+summary{font-weight:600;cursor:pointer}
+details ul{margin:8px 0 2px;padding-left:20px}
+.gauges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.gauges figure{margin:0;text-align:center}
+.gauges figcaption{font-size:.85rem;color:var(--muted)}
+.readings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
+.reading{background:#f7f9fb;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.reading .k{font-size:.8rem;color:var(--muted)}
+.reading .v{font-weight:700;font-size:1.15rem}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn{border:0;border-radius:6px;padding:10px 18px;font-weight:600;font-size:1rem;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:#e6ebf1;color:var(--ink)}
+.choices{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.choices label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:0;color:var(--ink);cursor:pointer}
+.choices input{width:auto}
+.score{font-size:.9rem;color:var(--muted)}
+.tag{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 8px;border-radius:20px;background:#e6ebf1;color:var(--ink);margin-right:4px}
+table{border-collapse:collapse;width:100%;font-size:.92rem;margin-top:10px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:#f0f3f7;position:sticky;top:0}
+.tablewrap{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.hidden{display:none!important}
+.mark-ok{color:var(--ok);font-weight:700}.mark-bad{color:var(--bad);font-weight:700}
+footer{max-width:980px;margin:0 auto;padding:0 14px 24px;font-size:.78rem;color:var(--muted)}
+@media (max-width:520px){.row2{grid-template-columns:1fr}.stat .v{font-size:1.45rem}}
+</style>
+</head>
+<body>
+<header><div class="hwrap">
+  <div><h1 data-i18n="title"></h1><p data-i18n="subtitle"></p></div>
+  <div class="lang" role="group" aria-label="Language">
+    <button id="lang-es" class="active" type="button">ES</button>
+    <button id="lang-en" type="button">EN</button>
+  </div>
+</div></header>
+
+<nav class="tabs" role="tablist">
+  <button class="active" data-tab="calc" data-i18n="tabCalc" type="button"></button>
+  <button data-tab="practice" data-i18n="tabPractice" type="button"></button>
+  <button data-tab="pt" data-i18n="tabPT" type="button"></button>
+</nav>
+
+<main>
+<!-- CALCULATOR -->
+<section class="panel active" id="calc">
+  <div class="grid">
+    <fieldset>
+      <legend data-i18n="system"></legend>
+      <label for="c-ref" data-i18n="refrigerant"></label>
+      <select id="c-ref"></select>
+      <label for="c-meter" data-i18n="metering"></label>
+      <select id="c-meter">
+        <option value="txv" data-i18n="txv"></option>
+        <option value="fixed" data-i18n="fixed"></option>
+      </select>
+      <div id="c-fixed-box" class="row2 hidden">
+        <div><label for="c-iwb" data-i18n="iwb"></label><input id="c-iwb" type="number" step="0.5" value="63"></div>
+        <div><label for="c-odb" data-i18n="odb"></label><input id="c-odb" type="number" step="0.5" value="85"></div>
+      </div>
+      <div id="c-txv-box">
+        <label for="c-tsc" data-i18n="targetSC"></label><input id="c-tsc" type="number" step="0.5" value="10">
+      </div>
+    </fieldset>
+    <fieldset class="low">
+      <legend data-i18n="lowSide"></legend>
+      <label for="c-sp" data-i18n="suctionP"></label><input id="c-sp" type="number" step="0.5" value="118">
+      <label for="c-st" data-i18n="suctionT"></label><input id="c-st" type="number" step="0.5" value="52">
+    </fieldset>
+    <fieldset class="high">
+      <legend data-i18n="highSide"></legend>
+      <label for="c-lp" data-i18n="liquidP"></label><input id="c-lp" type="number" step="0.5" value="365">
+      <label for="c-lt" data-i18n="liquidT"></label><input id="c-lt" type="number" step="0.5" value="100">
+    </fieldset>
+  </div>
+  <div class="cards">
+    <div class="stat"><div class="k" data-i18n="evapSat"></div><div class="v" id="r-esat">–</div><div class="s" data-i18n="dewNote"></div></div>
+    <div class="stat"><div class="k" data-i18n="superheat"></div><div class="v" id="r-sh">–</div><div class="s" id="r-sh-t"></div></div>
+    <div class="stat"><div class="k" data-i18n="condSat"></div><div class="v" id="r-csat">–</div><div class="s" data-i18n="bubNote"></div></div>
+    <div class="stat"><div class="k" data-i18n="subcool"></div><div class="v" id="r-sc">–</div><div class="s" id="r-sc-t"></div></div>
+  </div>
+  <div id="c-diag"></div>
+  <details>
+    <summary data-i18n="checklistTitle"></summary>
+    <ul id="checklist"></ul>
+  </details>
+  <p class="note" id="c-formula"></p>
+</section>
+
+<!-- PRACTICE -->
+<section class="panel" id="practice">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div id="p-tags"></div>
+    <div class="score" id="p-score"></div>
+  </div>
+  <p data-i18n="practiceIntro" style="margin:10px 0 6px"></p>
+  <div class="gauges" id="p-gauges"></div>
+  <div class="readings" id="p-readings"></div>
+  <div class="row2">
+    <div><label for="p-sh" data-i18n="yourSH"></label><input id="p-sh" type="number" step="0.5" inputmode="decimal"></div>
+    <div><label for="p-sc" data-i18n="yourSC"></label><input id="p-sc" type="number" step="0.5" inputmode="decimal"></div>
+  </div>
+  <label data-i18n="yourDiag"></label>
+  <div class="choices" id="p-choices">
+    <label><input type="radio" name="p-d" value="ok"><span data-i18n="optOk"></span></label>
+    <label><input type="radio" name="p-d" value="add"><span data-i18n="optAdd"></span></label>
+    <label><input type="radio" name="p-d" value="recover"><span data-i18n="optRecover"></span></label>
+  </div>
+  <div class="btns">
+    <button class="btn primary" id="p-check" type="button" data-i18n="check"></button>
+    <button class="btn ghost" id="p-new" type="button" data-i18n="newCase"></button>
+  </div>
+  <div id="p-feedback"></div>
+</section>
+
+<!-- PT TABLE -->
+<section class="panel" id="pt">
+  <div class="grid">
+    <fieldset>
+      <legend data-i18n="ptLookup"></legend>
+      <label for="t-ref" data-i18n="refrigerant"></label><select id="t-ref"></select>
+      <div class="row2">
+        <div><label for="t-temp" data-i18n="tempF"></label><input id="t-temp" type="number" step="1" value="40"></div>
+        <div><label for="t-press" data-i18n="pressPsig"></label><input id="t-press" type="number" step="1" placeholder="psig"></div>
+      </div>
+      <div id="t-out" class="diag info"></div>
+    </fieldset>
+    <div id="t-refnote" class="note" style="margin-top:0"></div>
+  </div>
+  <div class="tablewrap"><table id="t-table"></table></div>
+</section>
+</main>
+<footer id="foot"></footer>
+
+<script>
+const PT = {"R-410A":{"b":[26.3,27.3,28.2,29.2,30.2,31.2,32.2,33.2,34.3,35.4,36.5,37.6,38.7,39.9,41.0,42.2,43.4,44.6,45.9,47.2,48.4,49.7,51.1,52.4,53.8,55.2,56.6,58.0,59.5,60.9,62.4,63.9,65.5,67.1,68.6,70.3,71.9,73.5,75.2,76.9,78.7,80.4,82.2,84.0,85.8,87.7,89.6,91.5,93.4,95.4,97.4,99.4,101.4,103.5,105.6,107.7,109.9,112.1,114.3,116.5,118.8,121.1,123.4,125.8,128.2,130.6,133.0,135.5,138.0,140.6,143.1,145.8,148.4,151.1,153.8,156.5,159.3,162.1,164.9,167.8,170.7,173.7,176.6,179.6,182.7,185.8,188.9,192.0,195.2,198.5,201.7,205.0,208.4,211.8,215.2,218.6,222.1,225.7,229.2,232.9,236.5,240.2,243.9,247.7,251.5,255.4,259.3,263.2,267.2,271.3,275.3,279.5,283.6,287.8,292.1,296.4,300.7,305.1,309.5,314.0,318.5,323.1,327.7,332.4,337.1,341.9,346.7,351.6,356.5,361.4,366.5,371.5,376.6,381.8,387.0,392.3,397.6,403.0,408.4,413.9,419.5,425.1,430.7,436.4,442.2,448.0,453.9,459.9,465.9,471.9,478.0,484.2,490.5,496.8,503.1,509.5,516.0,522.6,529.2,535.9,542.6,549.4,556.3,563.3,570.3,577.4,584.5,591.8,599.1,606.4,613.9],"d":[26.2,27.1,28.1,29.0,30.0,31.0,32.0,33.1,34.1,35.2,36.3,37.4,38.5,39.7,40.8,42.0,43.2,44.4,45.7,46.9,48.2,49.5,50.8,52.2,53.5,54.9,56.3,57.8,59.2,60.7,62.2,63.7,65.2,66.8,68.4,70.0,71.6,73.3,74.9,76.6,78.4,80.1,81.9,83.7,85.5,87.4,89.2,91.1,93.1,95.0,97.0,99.0,101.1,103.1,105.2,107.3,109.5,111.7,113.9,116.1,118.4,120.6,123.0,125.3,127.7,130.1,132.6,135.0,137.5,140.1,142.6,145.2,147.9,150.5,153.2,156.0,158.7,161.5,164.4,167.2,170.1,173.1,176.0,179.0,182.1,185.1,188.3,191.4,194.6,197.8,201.1,204.4,207.7,211.1,214.5,217.9,221.4,224.9,228.5,232.1,235.7,239.4,243.2,246.9,250.7,254.6,258.5,262.4,266.4,270.4,274.5,278.6,282.7,286.9,291.2,295.4,299.8,304.1,308.6,313.0,317.6,322.1,326.7,331.4,336.1,340.8,345.7,350.5,355.4,360.4,365.4,370.4,375.5,380.7,385.9,391.2,396.5,401.9,407.3,412.8,418.3,423.9,429.6,435.3,441.0,446.8,452.7,458.7,464.7,470.7,476.8,483.0,489.3,495.6,501.9,508.4,514.9,521.4,528.0,534.7,541.5,548.3,555.2,562.2,569.2,576.3,583.5,590.8,598.1,605.5,613.0]},"R-454B":{"b":[24.8,25.7,26.6,27.5,28.5,29.4,30.4,31.4,32.4,33.5,34.5,35.5,36.6,37.8,38.9,40.0,41.1,42.3,43.5,44.7,45.9,47.2,48.5,49.7,51.1,52.4,53.7,55.1,56.5,57.9,59.3,60.8,62.3,63.8,65.3,66.8,68.4,69.9,71.6,73.2,74.8,76.5,78.2,80.0,81.7,83.5,85.3,87.1,89.0,90.8,92.8,94.7,96.6,98.6,100.6,102.6,104.7,106.8,108.9,111.0,113.2,115.4,117.6,119.9,122.2,124.5,126.8,129.2,131.6,134.0,136.5,138.9,141.5,144.0,146.6,149.2,151.9,154.5,157.2,160.0,162.8,165.6,168.4,171.3,174.2,177.1,180.1,183.1,186.1,189.2,192.3,195.5,198.6,201.9,205.1,208.4,211.7,215.1,218.5,221.9,225.4,228.9,232.5,236.1,239.7,243.4,247.1,250.8,254.6,258.4,262.3,266.2,270.2,274.2,278.2,282.3,286.4,290.5,294.7,299.0,303.3,307.6,312.0,316.4,320.9,325.4,329.9,334.5,339.2,343.9,348.6,353.4,358.2,363.1,368.0,373.0,378.0,383.1,388.2,393.4,398.6,403.9,409.2,414.6,420.0,425.5,431.0,436.6,442.2,447.9,453.6,459.4,465.4,471.4,477.4,483.4,489.3,495.3,501.5,507.8,514.1,520.4,526.8,533.3,539.8,546.4,553.1,559.8,566.6,573.4,580.3],"d":[22.8,23.6,24.4,25.3,26.2,27.2,28.1,29.0,30.0,31.0,32.0,33.0,34.0,35.1,36.2,37.3,38.4,39.5,40.6,41.8,42.9,44.1,45.3,46.6,47.8,49.1,50.4,51.7,53.0,54.4,55.7,57.2,58.6,60.0,61.5,62.9,64.4,65.9,67.5,69.1,70.6,72.3,73.9,75.5,77.2,78.9,80.7,82.4,84.2,86.0,87.8,89.7,91.6,93.5,95.4,97.3,99.3,101.3,103.4,105.4,107.5,109.6,111.8,113.9,116.1,118.4,120.6,122.9,125.2,127.5,129.9,132.3,134.7,137.2,139.7,142.2,144.8,147.4,150.0,152.6,155.3,158.0,160.8,163.5,166.3,169.2,172.1,175.0,177.9,180.9,183.9,187.0,190.0,193.2,196.3,199.5,202.7,206.0,209.3,212.7,216.0,219.4,222.9,226.4,229.9,233.5,237.1,240.7,244.4,248.2,251.9,255.7,259.6,263.5,267.4,271.4,275.4,279.5,283.6,287.7,291.9,296.1,300.4,304.7,309.1,313.5,318.0,322.5,327.1,331.7,336.3,341.0,345.8,350.6,355.4,360.3,365.2,370.2,375.3,380.4,385.5,390.7,396.0,401.3,406.7,412.1,417.5,423.1,428.7,434.3,440.0,445.7,451.5,457.4,463.3,469.3,475.4,481.6,487.7,493.9,500.2,506.5,512.9,519.4,526.0,532.6,539.3,546.1,552.9,559.8,566.8]},"R-32":{"b":[26.8,27.8,28.7,29.7,30.7,31.7,32.8,33.8,34.9,36.0,37.1,38.2,39.4,40.5,41.7,42.9,44.2,45.4,46.7,47.9,49.3,50.6,51.9,53.3,54.7,56.1,57.5,59.0,60.5,62.0,63.5,65.0,66.6,68.2,69.8,71.4,73.1,74.8,76.5,78.3,80.0,81.8,83.6,85.5,87.3,89.2,91.1,93.1,95.1,97.1,99.1,101.1,103.2,105.3,107.5,109.7,111.9,114.1,116.3,118.6,121.0,123.3,125.7,128.1,130.5,133.0,135.5,138.0,140.6,143.2,145.8,148.5,151.2,153.9,156.7,159.5,162.4,165.2,168.1,171.1,174.0,177.1,180.1,183.2,186.3,189.5,192.7,195.9,199.2,202.5,205.8,209.2,212.6,216.1,219.6,223.2,226.7,230.4,234.0,237.7,241.5,245.3,249.1,253.0,256.9,260.9,264.9,268.9,273.0,277.1,281.3,285.5,289.8,294.1,298.5,302.9,307.4,311.9,316.4,321.0,325.7,330.4,335.1,339.9,344.8,349.6,354.6,359.6,364.6,369.7,374.9,380.1,385.3,390.7,396.0,401.4,406.9,412.4,418.0,423.6,429.3,435.1,440.9,446.8,452.7,458.7,464.7,470.8,477.0,483.2,489.5,495.8,502.2,508.7,515.2,521.8,528.5,535.2,542.0,548.8,555.8,562.8,569.8,576.9,584.1,591.4,598.7,606.2,613.6,621.2,628.8],"d":[26.8,27.8,28.7,29.7,30.7,31.7,32.8,33.8,34.9,36.0,37.1,38.2,39.4,40.5,41.7,42.9,44.2,45.4,46.7,47.9,49.3,50.6,51.9,53.3,54.7,56.1,57.5,59.0,60.5,62.0,63.5,65.0,66.6,68.2,69.8,71.4,73.1,74.8,76.5,78.3,80.0,81.8,83.6,85.5,87.3,89.2,91.1,93.1,95.1,97.1,99.1,101.1,103.2,105.3,107.5,109.7,111.9,114.1,116.3,118.6,121.0,123.3,125.7,128.1,130.5,133.0,135.5,138.0,140.6,143.2,145.8,148.5,151.2,153.9,156.7,159.5,162.4,165.2,168.1,171.1,174.0,177.1,180.1,183.2,186.3,189.5,192.7,195.9,199.2,202.5,205.8,209.2,212.6,216.1,219.6,223.2,226.7,230.4,234.0,237.7,241.5,245.3,249.1,253.0,256.9,260.9,264.9,268.9,273.0,277.1,281.3,285.5,289.8,294.1,298.5,302.9,307.4,311.9,316.4,321.0,325.7,330.4,335.1,339.9,344.8,349.6,354.6,359.6,364.6,369.7,374.9,380.1,385.3,390.7,396.0,401.4,406.9,412.4,418.0,423.6,429.3,435.1,440.9,446.8,452.7,458.7,464.7,470.8,477.0,483.2,489.5,495.8,502.2,508.7,515.2,521.8,528.5,535.2,542.0,548.8,555.8,562.8,569.8,576.9,584.1,591.4,598.7,606.2,613.6,621.2,628.8]},"R-22":{"b":[10.2,10.8,11.4,12.0,12.6,13.2,13.9,14.5,15.2,15.9,16.5,17.2,17.9,18.7,19.4,20.1,20.9,21.7,22.4,23.2,24.0,24.9,25.7,26.5,27.4,28.3,29.2,30.1,31.0,31.9,32.8,33.8,34.8,35.8,36.8,37.8,38.8,39.9,40.9,42.0,43.1,44.2,45.3,46.5,47.6,48.8,50.0,51.2,52.4,53.7,55.0,56.2,57.5,58.8,60.2,61.5,62.9,64.3,65.7,67.1,68.6,70.0,71.5,73.0,74.5,76.1,77.6,79.2,80.8,82.4,84.1,85.7,87.4,89.1,90.8,92.6,94.4,96.1,98.0,99.8,101.6,103.5,105.4,107.3,109.3,111.2,113.2,115.3,117.3,119.4,121.4,123.5,125.7,127.8,130.0,132.2,134.5,136.7,139.0,141.3,143.6,146.0,148.4,150.8,153.2,155.7,158.2,160.7,163.2,165.8,168.4,171.0,173.7,176.4,179.1,181.8,184.6,187.4,190.2,193.0,195.9,198.8,201.8,204.7,207.7,210.8,213.8,216.9,220.0,223.2,226.4,229.6,232.8,236.1,239.4,242.8,246.1,249.5,253.0,256.4,260.0,263.5,267.1,270.7,274.3,278.0,281.7,285.4,289.2,293.0,296.9,300.8,304.7,308.6,312.6,316.7,320.7,324.8,329.0,333.2,337.4,341.6,345.9,350.3,354.6,359.0,363.5,368.0,372.5,377.1,381.7],"d":[10.2,10.8,11.4,12.0,12.6,13.2,13.9,14.5,15.2,15.9,16.5,17.2,17.9,18.7,19.4,20.1,20.9,21.7,22.4,23.2,24.0,24.9,25.7,26.5,27.4,28.3,29.2,30.1,31.0,31.9,32.8,33.8,34.8,35.8,36.8,37.8,38.8,39.9,40.9,42.0,43.1,44.2,45.3,46.5,47.6,48.8,50.0,51.2,52.4,53.7,55.0,56.2,57.5,58.8,60.2,61.5,62.9,64.3,65.7,67.1,68.6,70.0,71.5,73.0,74.5,76.1,77.6,79.2,80.8,82.4,84.1,85.7,87.4,89.1,90.8,92.6,94.4,96.1,98.0,99.8,101.6,103.5,105.4,107.3,109.3,111.2,113.2,115.3,117.3,119.4,121.4,123.5,125.7,127.8,130.0,132.2,134.5,136.7,139.0,141.3,143.6,146.0,148.4,150.8,153.2,155.7,158.2,160.7,163.2,165.8,168.4,171.0,173.7,176.4,179.1,181.8,184.6,187.4,190.2,193.0,195.9,198.8,201.8,204.7,207.7,210.8,213.8,216.9,220.0,223.2,226.4,229.6,232.8,236.1,239.4,242.8,246.1,249.5,253.0,256.4,260.0,263.5,267.1,270.7,274.3,278.0,281.7,285.4,289.2,293.0,296.9,300.8,304.7,308.6,312.6,316.7,320.7,324.8,329.0,333.2,337.4,341.6,345.9,350.3,354.6,359.0,363.5,368.0,372.5,377.1,381.7]}};
+const T0 = -20; // first table temperature, °F, 1 °F steps
+
+const REF_INFO = {
+  "R-410A": {glide:false, es:"HFC, mezcla casi azeotrópica (R-32/R-125). Cargue en estado líquido.", en:"HFC near-azeotropic blend (R-32/R-125). Charge as liquid."},
+  "R-454B": {glide:true,  es:"A2L, mezcla zeotrópica (R-32/R-1234yf 68.9/31.1). Glide ≈ 2 °F: use dew para superheat y bubble para subcooling. Cargue en estado líquido.", en:"A2L zeotropic blend (R-32/R-1234yf 68.9/31.1). ≈2 °F glide: use dew for superheat and bubble for subcooling. Charge as liquid."},
+  "R-32":   {glide:false, es:"A2L, refrigerante puro (sin glide).", en:"A2L single-component refrigerant (no glide)."},
+  "R-22":   {glide:false, es:"HCFC, refrigerante puro. Equipos existentes solamente.", en:"HCFC single-component. Existing equipment only."}
+};
+
+const I18N = {
+es:{
+ title:"Simulador de Superheat y Subcooling",
+ subtitle:"Herramienta de práctica para carga de refrigerante · HVAC-R",
+ tabCalc:"Calculadora", tabPractice:"Práctica", tabPT:"Tabla PT",
+ system:"Equipo", refrigerant:"Refrigerante", metering:"Dispositivo de expansión",
+ txv:"TXV / EEV (válvula de expansión)", fixed:"Orificio fijo / pistón",
+ iwb:"Bulbo húmedo interior (°F WB)", odb:"Bulbo seco exterior (°F DB)",
+ targetSC:"Subcooling objetivo (placa del equipo, °F)",
+ lowSide:"Lado de baja (succión)", highSide:"Lado de alta (línea de líquido)",
+ suctionP:"Presión de succión (psig)", suctionT:"Temperatura de la línea de succión (°F)",
+ liquidP:"Presión de la línea de líquido (psig)", liquidT:"Temperatura de la línea de líquido (°F)",
+ evapSat:"Temp. de saturación del evaporador", dewNote:"Punto de rocío (dew)",
+ condSat:"Temp. de saturación del condensador", bubNote:"Punto de burbuja (bubble)",
+ superheat:"Superheat (sobrecalentamiento)", subcool:"Subcooling (subenfriamiento)",
+ target:"Objetivo: {0}", outOfRange:"Fuera de rango",
+ dOk:"Carga correcta", dAdd:"Falta refrigerante", dRecover:"Exceso de refrigerante",
+ dCheck:"Revise antes de tocar la carga", dNoCharge:"No cargue por superheat ahora",
+ dIncomplete:"Ingrese todas las lecturas",
+ fixOk:"El superheat está dentro de ±5 °F del objetivo ({0}).",
+ fixAdd:"Superheat {0} por encima del objetivo. Agregue refrigerante en pequeñas cantidades y espere 10–15 min antes de volver a medir.",
+ fixRecover:"Superheat {0} por debajo del objetivo. Recupere refrigerante en pequeñas cantidades y vuelva a medir.",
+ fixNoCharge:"El superheat objetivo calculado es menor de 5 °F. En estas condiciones no se debe cargar por superheat: espere condiciones de mayor carga o use el método de peso (báscula).",
+ txvOk:"El subcooling está dentro de ±3 °F del objetivo de placa ({0}).",
+ txvAdd:"Subcooling {0} por debajo del objetivo. Agregue refrigerante en pequeñas cantidades y espere a que se estabilice.",
+ txvRecover:"Subcooling {0} por encima del objetivo. Recupere refrigerante en pequeñas cantidades.",
+ restriction:"Superheat alto y subcooling alto al mismo tiempo apuntan a una restricción (filtro secador, línea de líquido, dispositivo de expansión), no a falta de carga. No agregue refrigerante.",
+ lowSHtxv:"Superheat menor de 3 °F con TXV: riesgo de retorno de líquido al compresor. Verifique el bulbo de la TXV (contacto y aislamiento) y el flujo de aire interior.",
+ airflowAdd:"Un superheat alto también puede ser carga térmica alta. Confirme primero condiciones estables.",
+ airflowRecover:"Un superheat bajo también puede ser flujo de aire interior bajo (filtro sucio, velocidad del ventilador, serpentín sucio). Descarte eso antes de recuperar refrigerante.",
+ checklistTitle:"Antes de ajustar la carga",
+ checklist:["Filtro limpio y flujo de aire interior correcto (≈400 CFM por tonelada, o lo que indique el fabricante).","Serpentines del evaporador y del condensador limpios.","Equipo funcionando al menos 10–15 minutos con el termostato pidiendo enfriamiento.","Temperatura exterior dentro del rango del método del fabricante (normalmente 55 °F o más).","Temperaturas de línea tomadas a menos de 6\" de las válvulas de servicio, con el sensor aislado.","Para R-410A y R-454B: cargue siempre en estado líquido."],
+ formula:"Orificio fijo: superheat objetivo ≈ (3 × WB interior − 80 − DB exterior) ÷ 2, aproximación de la tabla estándar. Siempre tiene prioridad el valor del fabricante.",
+ practiceIntro:"Lea los manómetros y los termómetros. Calcule el superheat y el subcooling, y luego decida qué hacer con la carga.",
+ yourSH:"Su superheat (°F)", yourSC:"Su subcooling (°F)", yourDiag:"Su diagnóstico",
+ optOk:"Carga correcta", optAdd:"Agregar refrigerante", optRecover:"Recuperar refrigerante",
+ check:"Revisar", newCase:"Nuevo caso",
+ score:"Puntaje: {0} de {1} casos correctos",
+ gLow:"Succión", gHigh:"Línea de líquido",
+ rSuctionT:"Temp. línea de succión", rLiquidT:"Temp. línea de líquido",
+ rIWB:"Bulbo húmedo interior", rODB:"Bulbo seco exterior", rTSC:"Subcooling objetivo (placa)",
+ needAll:"Complete el superheat, el subcooling y el diagnóstico.",
+ allRight:"¡Correcto en todo!", someWrong:"Revise lo marcado y compare con la solución.",
+ solution:"Solución paso a paso",
+ sol1:"Saturación a {0} psig (dew) = {1} °F → Superheat = {2} − {1} = {3} °F",
+ sol2:"Saturación a {0} psig (bubble) = {1} °F → Subcooling = {1} − {2} = {3} °F",
+ sol3fix:"Objetivo de superheat = (3 × {0} − 80 − {1}) ÷ 2 = {2} °F",
+ sol3txv:"Objetivo de subcooling (placa) = {0} °F",
+ tolerance:"Se acepta ±2 °F en sus cálculos.",
+ ptLookup:"Consulta rápida", tempF:"Temperatura (°F)", pressPsig:"Presión (psig)",
+ ptAtT:"A {0} °F: {1}", ptAtP:"A {0} psig: {1}",
+ bubble:"bubble", dew:"dew", pressure:"Presión",
+ colT:"°F", colBub:"Bubble (psig)", colDew:"Dew (psig)", colP:"Presión (psig)",
+ foot:"Presiones de saturación calculadas con CoolProp (ecuaciones de estado de referencia), en psig a nivel del mar. Herramienta educativa: el método de carga y los valores objetivo del fabricante siempre tienen prioridad."
+},
+en:{
+ title:"Superheat & Subcooling Simulator",
+ subtitle:"Refrigerant charging practice tool · HVAC-R",
+ tabCalc:"Calculator", tabPractice:"Practice", tabPT:"PT Chart",
+ system:"Equipment", refrigerant:"Refrigerant", metering:"Metering device",
+ txv:"TXV / EEV (expansion valve)", fixed:"Fixed orifice / piston",
+ iwb:"Indoor wet bulb (°F WB)", odb:"Outdoor dry bulb (°F DB)",
+ targetSC:"Target subcooling (nameplate, °F)",
+ lowSide:"Low side (suction)", highSide:"High side (liquid line)",
+ suctionP:"Suction pressure (psig)", suctionT:"Suction line temperature (°F)",
+ liquidP:"Liquid line pressure (psig)", liquidT:"Liquid line temperature (°F)",
+ evapSat:"Evaporator saturation temp", dewNote:"Dew point",
+ condSat:"Condenser saturation temp", bubNote:"Bubble point",
+ superheat:"Superheat", subcool:"Subcooling",
+ target:"Target: {0}", outOfRange:"Out of range",
+ dOk:"Charge is correct", dAdd:"Undercharged", dRecover:"Overcharged",
+ dCheck:"Check this before touching the charge", dNoCharge:"Don't charge by superheat right now",
+ dIncomplete:"Enter all readings",
+ fixOk:"Superheat is within ±5 °F of target ({0}).",
+ fixAdd:"Superheat is {0} above target. Add refrigerant in small amounts and wait 10–15 min before re-measuring.",
+ fixRecover:"Superheat is {0} below target. Recover refrigerant in small amounts and re-measure.",
+ fixNoCharge:"Calculated target superheat is below 5 °F. Don't charge by superheat under these conditions: wait for a higher load or weigh in the charge.",
+ txvOk:"Subcooling is within ±3 °F of the nameplate target ({0}).",
+ txvAdd:"Subcooling is {0} below target. Add refrigerant in small amounts and let it stabilize.",
+ txvRecover:"Subcooling is {0} above target. Recover refrigerant in small amounts.",
+ restriction:"High superheat and high subcooling together point to a restriction (filter drier, liquid line, metering device), not an undercharge. Don't add refrigerant.",
+ lowSHtxv:"Superheat under 3 °F on a TXV system risks liquid floodback to the compressor. Check the TXV bulb (contact and insulation) and indoor airflow.",
+ airflowAdd:"High superheat can also come from a high heat load. Confirm the system is stable first.",
+ airflowRecover:"Low superheat can also come from low indoor airflow (dirty filter, blower speed, dirty coil). Rule that out before recovering refrigerant.",
+ checklistTitle:"Before adjusting the charge",
+ checklist:["Clean filter and correct indoor airflow (≈400 CFM per ton, or per manufacturer).","Clean evaporator and condenser coils.","System running at least 10–15 minutes with a call for cooling.","Outdoor temperature within the manufacturer's method range (typically 55 °F or higher).","Line temps taken within 6\" of the service valves, with the sensor insulated.","For R-410A and R-454B: always charge as liquid."],
+ formula:"Fixed orifice: target superheat ≈ (3 × indoor WB − 80 − outdoor DB) ÷ 2, an approximation of the standard chart. Manufacturer values always take priority.",
+ practiceIntro:"Read the gauges and thermometers. Calculate superheat and subcooling, then decide what to do with the charge.",
+ yourSH:"Your superheat (°F)", yourSC:"Your subcooling (°F)", yourDiag:"Your diagnosis",
+ optOk:"Charge is correct", optAdd:"Add refrigerant", optRecover:"Recover refrigerant",
+ check:"Check", newCase:"New case",
+ score:"Score: {0} of {1} cases correct",
+ gLow:"Suction", gHigh:"Liquid line",
+ rSuctionT:"Suction line temp", rLiquidT:"Liquid line temp",
+ rIWB:"Indoor wet bulb", rODB:"Outdoor dry bulb", rTSC:"Target subcooling (nameplate)",
+ needAll:"Fill in superheat, subcooling and your diagnosis.",
+ allRight:"All correct!", someWrong:"Check the marked items and compare with the solution.",
+ solution:"Step-by-step solution",
+ sol1:"Saturation at {0} psig (dew) = {1} °F → Superheat = {2} − {1} = {3} °F",
+ sol2:"Saturation at {0} psig (bubble) = {1} °F → Subcooling = {1} − {2} = {3} °F",
+ sol3fix:"Target superheat = (3 × {0} − 80 − {1}) ÷ 2 = {2} °F",
+ sol3txv:"Target subcooling (nameplate) = {0} °F",
+ tolerance:"Your calculations are accepted within ±2 °F.",
+ ptLookup:"Quick lookup", tempF:"Temperature (°F)", pressPsig:"Pressure (psig)",
+ ptAtT:"At {0} °F: {1}", ptAtP:"At {0} psig: {1}",
+ bubble:"bubble", dew:"dew", pressure:"Pressure",
+ colT:"°F", colBub:"Bubble (psig)", colDew:"Dew (psig)", colP:"Pressure (psig)",
+ foot:"Saturation pressures computed with CoolProp (reference equations of state), in psig at sea level. Educational tool: the manufacturer's charging method and targets always take priority."
+}};
+
+let lang = "es";
+const $ = id => document.getElementById(id);
+function t(k, ...a){ let s = I18N[lang][k] ?? k; a.forEach((v,i)=>{ s = s.split("{"+i+"}").join(v); }); return s; }
+const f1 = n => (Math.round(n*10)/10).toFixed(1);
+const fF = n => f1(n) + " °F";
+
+// ---------- PT helpers ----------
+function satTemp(ref, psig, phase){ // phase: 'd' dew | 'b' bubble
+  const a = PT[ref][phase];
+  if (!isFinite(psig) || psig < a[0] || psig > a[a.length-1]) return null;
+  for (let i=1;i<a.length;i++){
+    if (psig <= a[i]){ const fr=(psig-a[i-1])/(a[i]-a[i-1]); return T0 + i-1 + fr; }
+  }
+  return null;
+}
+function satPress(ref, tempF, phase){
+  const a = PT[ref][phase]; const x = tempF - T0;
+  if (!isFinite(tempF) || x < 0 || x > a.length-1) return null;
+  const i = Math.min(Math.floor(x), a.length-2), fr = x - i;
+  return a[i] + fr*(a[i+1]-a[i]);
+}
+
+// ---------- Diagnosis (shared by calculator and practice) ----------
+function targetSH(iwb, odb){ return (3*iwb - 80 - odb)/2; }
+function diagnose(o){ // o: {meter, sh, sc, tsh, tsc}
+  const r = {status:"", title:"", msgs:[]};
+  if (o.meter === "fixed"){
+    if (o.tsh < 5){ r.status="nocharge"; r.msgs.push(t("fixNoCharge")); return r; }
+    const d = o.sh - o.tsh;
+    if (d > 5 && o.sc > 15){ r.status="check"; r.msgs.push(t("restriction")); return r; }
+    if (d > 5){ r.status="add"; r.msgs.push(t("fixAdd", fF(d)), t("airflowAdd")); }
+    else if (d < -5){ r.status="recover"; r.msgs.push(t("fixRecover", fF(-d)), t("airflowRecover")); }
+    else { r.status="ok"; r.msgs.push(t("fixOk", fF(o.tsh))); }
+  } else {
+    const d = o.sc - o.tsc;
+    if (d > 3 && o.sh > 20){ r.status="check"; r.msgs.push(t("restriction")); return r; }
+    if (d < -3){ r.status="add"; r.msgs.push(t("txvAdd", fF(-d))); }
+    else if (d > 3){ r.status="recover"; r.msgs.push(t("txvRecover", fF(d))); }
+    else { r.status="ok"; r.msgs.push(t("txvOk", fF(o.tsc))); }
+    if (o.sh < 3) r.msgs.push(t("lowSHtxv"));
+  }
+  return r;
+}
+const STATUS_TITLE = {ok:"dOk", add:"dAdd", recover:"dRecover", check:"dCheck", nocharge:"dNoCharge"};
+function diagHTML(r){
+  return `<div class="diag ${r.status}"><h3>${t(STATUS_TITLE[r.status])}</h3>${r.msgs.map(m=>`<p>${m}</p>`).join("")}</div>`;
+}
+
+// ---------- Calculator ----------
+function fillRefSelect(sel){ sel.innerHTML = Object.keys(PT).map(k=>`<option>${k}</option>`).join(""); }
+function num(id){ const v = parseFloat($(id).value); return isFinite(v) ? v : NaN; }
+function recalc(){
+  const ref=$("c-ref").value, meter=$("c-meter").value;
+  $("c-fixed-box").classList.toggle("hidden", meter!=="fixed");
+  $("c-txv-box").classList.toggle("hidden", meter!=="txv");
+  const sp=num("c-sp"), st=num("c-st"), lp=num("c-lp"), lt=num("c-lt");
+  const es = satTemp(ref, sp, "d"), cs = satTemp(ref, lp, "b");
+  $("r-esat").textContent = es==null ? (isNaN(sp)?"–":t("outOfRange")) : fF(es);
+  $("r-csat").textContent = cs==null ? (isNaN(lp)?"–":t("outOfRange")) : fF(cs);
+  const sh = (es!=null && !isNaN(st)) ? st - es : null;
+  const sc = (cs!=null && !isNaN(lt)) ? cs - lt : null;
+  $("r-sh").textContent = sh==null ? "–" : fF(sh);
+  $("r-sc").textContent = sc==null ? "–" : fF(sc);
+  let tsh=null, tsc=null;
+  if (meter==="fixed"){ const iwb=num("c-iwb"), odb=num("c-odb"); if(!isNaN(iwb)&&!isNaN(odb)) tsh=targetSH(iwb,odb); }
+  else { tsc = num("c-tsc"); if (isNaN(tsc)) tsc=null; }
+  $("r-sh-t").textContent = tsh!=null ? t("target", fF(tsh)) : "";
+  $("r-sc-t").textContent = tsc!=null ? t("target", fF(tsc)) : "";
+  const ready = sh!=null && sc!=null && (meter==="fixed" ? tsh!=null : tsc!=null);
+  $("c-diag").innerHTML = ready
+    ? diagHTML(diagnose({meter, sh, sc, tsh, tsc}))
+    : `<div class="diag info"><h3>${t("dIncomplete")}</h3></div>`;
+  $("checklist").innerHTML = I18N[lang].checklist.map(x=>`<li>${x}</li>`).join("");
+  $("c-formula").textContent = t("formula") + " " + REF_INFO[ref][lang];
+}
+
+// ---------- Gauges ----------
+function gaugeSVG(val, max, major, minor, color, label){
+  const cx=110, cy=110, r=88, A0=135, SW=270;
+  const ang = v => (A0 + SW*Math.max(0,Math.min(v,max))/max) * Math.PI/180;
+  const pt = (a,rr) => [cx+rr*Math.cos(a), cy+rr*Math.sin(a)];
+  let s = `<svg viewBox="0 0 220 216" width="200" height="196" role="img" aria-label="${label}: ${val} psig">`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r+12}" fill="#fff" stroke="${color}" stroke-width="5"/>`;
+  for (let v=0; v<=max+0.001; v+=minor){
+    const a=ang(v), isMaj = Math.abs(v/major - Math.round(v/major))<1e-6;
+    const [x1,y1]=pt(a,r), [x2,y2]=pt(a, isMaj? r-12 : r-6);
+    s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#333" stroke-width="${isMaj?2:1}"/>`;
+    if (isMaj){ const [tx,ty]=pt(a,r-24); s += `<text x="${tx}" y="${ty+4}" font-size="11" text-anchor="middle" fill="#333">${v}</text>`; }
+  }
+  const [nx,ny]=pt(ang(val), r-16);
+  s += `<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="6" fill="${color}"/>`;
+  s += `<text x="${cx}" y="${cy+40}" font-size="12" text-anchor="middle" fill="#555">psig</text>`;
+  s += `<text x="${cx}" y="${cy+62}" font-size="20" font-weight="700" text-anchor="middle" fill="${color}">${val}</text>`;
+  return s + `</svg>`;
+}
+
+// ---------- Practice ----------
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+let P = null, score = {ok:0, n:0}, answered = false;
+
+function genScenario(){
+  for (let tries=0; tries<200; tries++){
+    const ref = pick(Object.keys(PT)), meter = Math.random()<0.5 ? "fixed" : "txv";
+    const fault = pick(["ok","add","recover"]);
+    const evap = rnd(38,46), cond = rnd(98,118);
+    let sh, sc, iwb=null, odb=null, tsh=null, tsc=null;
+    if (meter==="fixed"){
+      do { iwb=rnd(60,68); odb=rnd(78,95); tsh=targetSH(iwb,odb); } while (tsh < 12);
+      if (fault==="ok"){ sh = Math.round(tsh) + rnd(-2,2); sc = rnd(8,12); }
+      if (fault==="add"){ sh = Math.round(tsh) + rnd(10,16); sc = rnd(2,5); }
+      if (fault==="recover"){ sh = Math.max(1, Math.round(tsh) - rnd(9,12)); sc = rnd(15,19); }
+    } else {
+      tsc = rnd(8,12);
+      if (fault==="ok"){ sc = tsc + rnd(-1,1); sh = rnd(8,12); }
+      if (fault==="add"){ sc = Math.max(1, tsc - rnd(6,8)); sh = rnd(14,22); }
+      if (fault==="recover"){ sc = tsc + rnd(7,10); sh = rnd(6,10); }
+    }
+    const sp = Math.round(satPress(ref, evap, "d")), lp = Math.round(satPress(ref, cond, "b"));
+    const st = evap + sh, lt = cond - sc;
+    const esat = satTemp(ref, sp, "d"), csat = satTemp(ref, lp, "b");
+    const shA = st - esat, scA = csat - lt;
+    const dg = diagnose({meter, sh:shA, sc:scA, tsh, tsc});
+    // keep only unambiguous cases: answer key must match the intended fault
+    if (dg.status !== fault) continue;
+    if (meter==="txv" && shA < 3) continue;
+    return {ref, meter, fault, sp, lp, st, lt, iwb, odb, tsh, tsc, esat, csat, shA, scA};
+  }
+  return null;
+}
+function renderPractice(){
+  if (!P) return;
+  $("p-tags").innerHTML = `<span class="tag">${P.ref}</span><span class="tag">${t(P.meter)}</span>`;
+  $("p-score").textContent = t("score", score.ok, score.n);
+  const hiMax = 700, loMax = 300;
+  $("p-gauges").innerHTML =
+    `<figure>${gaugeSVG(P.sp, loMax, 50, 10, "#1d63c4", t("gLow"))}<figcaption>${t("gLow")}</figcaption></figure>` +
+    `<figure>${gaugeSVG(P.lp, hiMax, 100, 20, "#c3372c", t("gHigh"))}<figcaption>${t("gHigh")}</figcaption></figure>`;
+  const items = [[t("rSuctionT"), P.st+" °F"],[t("rLiquidT"), P.lt+" °F"]];
+  if (P.meter==="fixed"){ items.push([t("rIWB"), P.iwb+" °F WB"],[t("rODB"), P.odb+" °F DB"]); }
+  else items.push([t("rTSC"), P.tsc+" °F"]);
+  $("p-readings").innerHTML = items.map(([k,v])=>`<div class="reading"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+  if (answered) showFeedback(false);
+}
+function newCase(){
+  P = genScenario(); answered = false;
+  $("p-sh").value = ""; $("p-sc").value = "";
+  document.querySelectorAll('input[name="p-d"]').forEach(r=>r.checked=false);
+  $("p-feedback").innerHTML = "";
+  renderPractice();
+}
+function showFeedback(count){
+  const ush = parseFloat($("p-sh").value), usc = parseFloat($("p-sc").value);
+  const ud = (document.querySelector('input[name="p-d"]:checked')||{}).value;
+  if (!isFinite(ush) || !isFinite(usc) || !ud){
+    $("p-feedback").innerHTML = `<div class="diag info"><h3>${t("needAll")}</h3></div>`; return;
+  }
+  const okSH = Math.abs(ush - P.shA) <= 2, okSC = Math.abs(usc - P.scA) <= 2, okD = ud === P.fault;
+  const all = okSH && okSC && okD;
+  if (count && !answered){ score.n++; if (all) score.ok++; answered = true; $("p-score").textContent = t("score", score.ok, score.n); }
+  const mk = b => b ? `<span class="mark-ok">✓</span>` : `<span class="mark-bad">✗</span>`;
+  const optKey = {ok:"optOk", add:"optAdd", recover:"optRecover"};
+  const dg = diagnose({meter:P.meter, sh:P.shA, sc:P.scA, tsh:P.tsh, tsc:P.tsc});
+  let h = `<div class="diag ${all?"ok":"check"}"><h3>${all?t("allRight"):t("someWrong")}</h3>`;
+  h += `<p>${mk(okSH)} ${t("superheat")}: ${f1(ush)} → ${fF(P.shA)}</p>`;
+  h += `<p>${mk(okSC)} ${t("subcool")}: ${f1(usc)} → ${fF(P.scA)}</p>`;
+  h += `<p>${mk(okD)} ${t("yourDiag")}: ${t(optKey[ud])} → ${t(optKey[P.fault])}</p></div>`;
+  h += `<details open><summary>${t("solution")}</summary><ul>`;
+  h += `<li>${t("sol1", P.sp, f1(P.esat), P.st, f1(P.shA))}</li>`;
+  h += `<li>${t("sol2", P.lp, f1(P.csat), P.lt, f1(P.scA))}</li>`;
+  h += P.meter==="fixed" ? `<li>${t("sol3fix", P.iwb, P.odb, f1(P.tsh))}</li>` : `<li>${t("sol3txv", P.tsc)}</li>`;
+  h += `</ul>${diagHTML(dg)}<p class="note">${t("tolerance")}</p></details>`;
+  $("p-feedback").innerHTML = h;
+}
+
+// ---------- PT tab ----------
+function renderPT(){
+  const ref = $("t-ref").value, glide = REF_INFO[ref].glide || ref==="R-410A";
+  $("t-refnote").textContent = REF_INFO[ref][lang];
+  const T = parseFloat($("t-temp").value), Pp = parseFloat($("t-press").value);
+  let out = "";
+  if (isFinite(T)){
+    const b = satPress(ref,T,"b"), d = satPress(ref,T,"d");
+    out += `<p>${t("ptAtT", T, b==null ? t("outOfRange") : (glide ? `${f1(b)} psig (${t("bubble")}) · ${f1(d)} psig (${t("dew")})` : `${f1(b)} psig`))}</p>`;
+  }
+  if (isFinite(Pp)){
+    const b = satTemp(ref,Pp,"b"), d = satTemp(ref,Pp,"d");
+    out += `<p>${t("ptAtP", Pp, b==null ? t("outOfRange") : (glide ? `${fF(b)} (${t("bubble")}) · ${fF(d)} (${t("dew")})` : fF(b)))}</p>`;
+  }
+  $("t-out").innerHTML = out || "<p>–</p>";
+  let h = `<thead><tr><th>${t("colT")}</th>` + (glide ? `<th>${t("colBub")}</th><th>${t("colDew")}</th>` : `<th>${t("colP")}</th>`) + `</tr></thead><tbody>`;
+  for (let T2=-20; T2<=150; T2+=5){
+    const i = T2 - T0;
+    h += `<tr><td>${T2}</td>` + (glide ? `<td>${f1(PT[ref].b[i])}</td><td>${f1(PT[ref].d[i])}</td>` : `<td>${f1(PT[ref].b[i])}</td>`) + `</tr>`;
+  }
+  $("t-table").innerHTML = h + "</tbody>";
+}
+
+// ---------- Language & wiring ----------
+function applyLang(l){
+  lang = l; document.documentElement.lang = l;
+  $("lang-es").classList.toggle("active", l==="es"); $("lang-en").classList.toggle("active", l==="en");
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  document.title = t("title");
+  $("foot").textContent = t("foot");
+  recalc(); renderPractice(); renderPT();
+}
+fillRefSelect($("c-ref")); fillRefSelect($("t-ref"));
+["c-ref","c-meter","c-iwb","c-odb","c-tsc","c-sp","c-st","c-lp","c-lt"].forEach(id => $(id).addEventListener("input", recalc));
+["t-ref","t-temp","t-press"].forEach(id => $(id).addEventListener("input", renderPT));
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("active", x===b));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.id===b.dataset.tab));
+}));
+$("lang-es").addEventListener("click", ()=>applyLang("es"));
+$("lang-en").addEventListener("click", ()=>applyLang("en"));
+$("p-check").addEventListener("click", ()=>showFeedback(true));
+$("p-new").addEventListener("click", newCase);
+try { const q = new URLSearchParams(location.search).get("lang"); if (q==="en") lang="en"; } catch(e){}
+P = genScenario();
+applyLang(lang);
+</script>
+</body>
+</html>
